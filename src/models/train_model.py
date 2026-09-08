@@ -22,6 +22,8 @@ def train_delay_predictor():
         "dispatch_hour",
         "dispatch_dayofweek",
         "is_weekend",
+        "avg_precipitation",
+        "avg_wind_speed",
     ]
     target_col = "is_sla_violated"
 
