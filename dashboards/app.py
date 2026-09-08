@@ -3,18 +3,13 @@ import pandas as pd
 import joblib
 import plotly.graph_objects as go
 
-# ---------------------------------------------------------------------------
-# Page setup
-# ---------------------------------------------------------------------------
+
 st.set_page_config(
     page_title="Supply Chain Delay Predictor",
     page_icon="📦",
     layout="wide",
 )
 
-# Design tokens. Palette is built around the subject (freight / logistics),
-# not a generic SaaS-dashboard default: cool paper background, steel-blue
-# brand accent, muted (not neon) traffic-light risk colors.
 PALETTE = {
     "bg": "#F3F5F4",
     "surface": "#FFFFFF",
@@ -86,9 +81,6 @@ st.caption(
     "schedule, and weather data."
 )
 
-# ---------------------------------------------------------------------------
-# Model
-# ---------------------------------------------------------------------------
 @st.cache_resource
 def load_model():
     return joblib.load("models/xgboost_delay_model.joblib")
@@ -99,9 +91,6 @@ except Exception as e:
     st.error(f"Couldn't load the model: {e}")
     st.stop()
 
-# ---------------------------------------------------------------------------
-# Sidebar inputs
-# ---------------------------------------------------------------------------
 st.sidebar.header("Shipment parameters")
 
 distance_km = st.sidebar.number_input("Distance (km)", 10.0, 2000.0, 450.0, step=10.0)
@@ -135,9 +124,7 @@ input_data = pd.DataFrame([{
     "avg_wind_speed": avg_wind_speed,
 }])
 
-# ---------------------------------------------------------------------------
 # Prediction
-# ---------------------------------------------------------------------------
 try:
     prob = float(model.predict_proba(input_data)[:, 1][0])
 except Exception as e:
@@ -207,8 +194,7 @@ with left:
         )
         st.plotly_chart(bar_fig, use_container_width=True)
     except Exception:
-        # Falls back to global feature importance if shap isn't installed
-        # or the model type isn't supported by TreeExplainer.
+
         importances = (
             pd.Series(model.feature_importances_, index=input_data.columns)
             .sort_values(ascending=False)
