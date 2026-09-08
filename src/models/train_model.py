@@ -2,7 +2,7 @@ import logging
 import os
 import joblib
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.metrics import accuracy_score, classification_report, f1_score, recall_score
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
@@ -15,7 +15,6 @@ def train_delay_predictor():
     logging.info("Chargement des données transformées...")
     df = pd.read_csv("data/processed/shipments_features.csv")
 
-    # Sélection des caractéristiques (Features) et de la cible (Target)
     feature_cols = [
         "distance_km",
         "expected_duration_hours",
@@ -34,24 +33,38 @@ def train_delay_predictor():
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # Entraînement du modèle XGBoost
-    logging.info("Entraînement du modèle XGBoost Classifier...")
+    # 1. Dynamic scale_pos_weight calculation
+    num_neg = (y_train == 0).sum()
+    num_pos = (y_train == 1).sum()
+    scale_weight = num_neg / num_pos
+    logging.info(
+        f"Calcul du poids des classes - Négatifs: {num_neg}, Positifs: {num_pos} | scale_pos_weight: {scale_weight:.2f}"
+    )
+
+    # 2. XGBoost with class balance handling
+    logging.info("Entraînement du modèle XGBoost Classifier (avec scale_pos_weight)...")
     model = XGBClassifier(
-        n_estimators=100, learning_rate=0.05, max_depth=5, random_state=42
+        n_estimators=100,
+        learning_rate=0.05,
+        max_depth=5,
+        scale_pos_weight=scale_weight,
+        random_state=42,
     )
     model.fit(X_train, y_train)
 
-    # Évaluation du modèle
+    # Model evaluation
     y_pred = model.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
 
-    logging.info(f"Performance du modèle - Exactitude (Accuracy): {acc:.4f}")
-    logging.info(f"Performance du modèle - Score F1: {f1:.4f}")
+    logging.info(f"Performance - Exactitude (Accuracy): {acc:.4f}")
+    logging.info(f"Performance - Rappel Classe 1 (Recall): {recall:.4f}")
+    logging.info(f"Performance - Score F1: {f1:.4f}")
     print("\nRapport de classification détaillé :\n")
     print(classification_report(y_test, y_pred))
 
-    # Sauvegarde du modèle entraîné
+    # Save trained model artifact
     os.makedirs("models", exist_ok=True)
     model_path = "models/xgboost_delay_model.joblib"
     joblib.dump(model, model_path)
